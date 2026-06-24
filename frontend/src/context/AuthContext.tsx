@@ -17,6 +17,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
 }
@@ -72,6 +73,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithToken = async (token: string) => {
+    setLoading(true);
+    try {
+      localStorage.setItem('auth_token', token);
+      const res = await api.get('/auth/me');
+      const loggedUser = res.data;
+      
+      localStorage.setItem('user', JSON.stringify(loggedUser));
+      setUser(loggedUser);
+
+      // Redirect based on role
+      if (loggedUser.role === 'ADMIN') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/user/dashboard');
+      }
+    } catch (err: any) {
+      localStorage.removeItem('auth_token');
+      setLoading(false);
+      throw err;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
@@ -88,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithToken, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

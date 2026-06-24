@@ -69,6 +69,35 @@ export class AuthService {
     };
   }
 
+  async googleLogin(req: any) {
+    if (!req.user) {
+      throw new UnauthorizedException('No user from google');
+    }
+    const email = req.user.email.toLowerCase();
+
+    let user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Create user if they don't exist
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          name: req.user.name,
+          passwordHash,
+          role: 'USER', // Default role
+          status: 'ACTIVE',
+          profilePhoto: req.user.profilePhoto,
+        },
+      });
+    }
+
+    // Call standard login to generate token and log the event
+    return this.login(user);
+  }
+
   async inviteUser(inviteDto: InviteDto, adminId: string) {
     const email = inviteDto.email.toLowerCase();
 
