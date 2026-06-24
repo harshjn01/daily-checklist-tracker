@@ -39,6 +39,8 @@ export default function LoginPage() {
     } catch (err: any) {
       if (!err.response) {
         setError('Connection failed. The API server is unreachable. Please verify your backend deployment/API URL.');
+      } else if (err.response.status === 404) {
+        setError('API Endpoint not found. Ensure NEXT_PUBLIC_API_URL is set in Vercel to your backend URL.');
       } else {
         setError(err.response.data?.message || 'Invalid email or password');
       }
