@@ -64,4 +64,9 @@ export class AuthController {
       profilePhoto: user.profilePhoto,
     };
   }
+
+  @Get('seed')
+  async seedAdmin() {
+    return this.authService.seedAdmin();
+  }
 }

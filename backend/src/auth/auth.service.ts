@@ -16,6 +16,25 @@ export class AuthService {
     private emailService: EmailService,
   ) {}
 
+  async seedAdmin() {
+    const email = 'admin@checklist.com';
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (!existing) {
+      const passwordHash = await bcrypt.hash('adminpassword123', 10);
+      await this.prisma.user.create({
+        data: {
+          email,
+          name: 'System Administrator',
+          passwordHash,
+          role: 'ADMIN',
+          status: 'ACTIVE',
+        },
+      });
+      return { message: 'Admin user successfully seeded.' };
+    }
+    return { message: 'Admin user already exists.' };
+  }
+
   async validateUser(loginDto: LoginDto) {
     const email = loginDto.email.toLowerCase().trim();
     console.log(`[LOGIN ATTEMPT] Email: '${email}', Password length: ${loginDto.password.length}`);
