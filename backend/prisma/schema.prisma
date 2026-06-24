@@ -1,0 +1,96 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  name         String
+  role         String      // 'ADMIN' or 'USER'
+  status       String      @default("PENDING_INVITE") // 'ACTIVE', 'INACTIVE', 'PENDING_INVITE'
+  profilePhoto String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  checklistsCreated Checklist[]
+  completions       ChecklistCompletion[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  assignments       ChecklistAssignment[]
+}
+
+model Invitation {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  token     String   @unique
+  expiresAt DateTime
+  status    String   @default("PENDING") // 'PENDING', 'ACCEPTED', 'EXPIRED'
+  createdAt DateTime @default(now())
+}
+
+model Checklist {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  isActive    Boolean   @default(true)
+  isRequired  Boolean   @default(true)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assignments ChecklistAssignment[]
+  completions ChecklistCompletion[]
+}
+
+model ChecklistAssignment {
+  id          String   @id @default(uuid())
+  checklistId String
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([checklistId, userId])
+}
+
+model ChecklistCompletion {
+  id          String    @id @default(uuid())
+  checklistId String
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String    // Format: YYYY-MM-DD
+  isCompleted Boolean   @default(true)
+  completedAt DateTime  @default(now())
+
+  @@unique([checklistId, userId, date])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  details   String   // JSON payload stored as text/string
+  ipAddress String?
+  createdAt DateTime @default(now())
+}

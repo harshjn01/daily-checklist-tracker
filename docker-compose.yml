@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: checklist-db
+    restart: always
+    environment:
+      POSTGRES_USER: checklist_user
+      POSTGRES_PASSWORD: checklist_password
+      POSTGRES_DB: checklist_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: checklist-backend
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      - DATABASE_URL=postgresql://checklist_user:checklist_password@db:5432/checklist_db?schema=public
+      - JWT_SECRET=supersecretjwtkey123!@#
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:3000
+      - SMTP_HOST=smtp.mailtrap.io
+      - SMTP_PORT=2525
+      - SMTP_USER=mock_user
+      - SMTP_PASS=mock_pass
+      - SMTP_FROM=noreply@checklisttracker.com
+      - DAILY_REMINDER_TIME=19:00
+    depends_on:
+      - db
+    volumes:
+      - backend_uploads:/usr/src/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: checklist-frontend
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
