@@ -17,23 +17,30 @@ export class AuthService {
   ) {}
 
   async validateUser(loginDto: LoginDto) {
+    const email = loginDto.email.toLowerCase().trim();
+    console.log(`[LOGIN ATTEMPT] Email: '${email}', Password length: ${loginDto.password.length}`);
+    
     const user = await this.prisma.user.findUnique({
-      where: { email: loginDto.email.toLowerCase() },
+      where: { email },
     });
 
     if (!user) {
+      console.log(`[LOGIN FAILED] User not found for email: ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
     if (user.status === 'INACTIVE') {
+      console.log(`[LOGIN FAILED] User ${email} is INACTIVE`);
       throw new UnauthorizedException('Your account has been disabled. Please contact the administrator.');
     }
 
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
     if (!isPasswordValid) {
+      console.log(`[LOGIN FAILED] Invalid password for ${email}`);
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    console.log(`[LOGIN SUCCESS] ${email} logged in successfully`);
     return user;
   }
 

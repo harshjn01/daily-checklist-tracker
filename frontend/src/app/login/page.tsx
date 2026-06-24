@@ -37,10 +37,11 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err: any) {
+      console.error('Login error:', err);
       if (!err.response) {
-        setError('Connection failed. The API server is unreachable. Please verify your backend deployment/API URL.');
-      } else if (err.response.status === 404) {
-        setError('API Endpoint not found. Ensure NEXT_PUBLIC_API_URL is set in Vercel to your backend URL.');
+        setError('CONNECTION FAILED: The API server is unreachable. Please verify your backend is running and NEXT_PUBLIC_API_URL is correct.');
+      } else if (err.response.status === 404 || err.response.status === 405) {
+        setError('MISSING BACKEND: Vercel is returning a Not Found error. This means NEXT_PUBLIC_API_URL is not set in your Vercel Environment Variables. Please set it to your Render backend URL and redeploy Vercel.');
       } else {
         setError(err.response.data?.message || 'Invalid email or password');
       }
