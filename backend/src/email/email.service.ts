@@ -11,22 +11,32 @@ export class EmailService {
   constructor() {
     this.from = process.env.SMTP_FROM || 'noreply@checklisttracker.com';
 
-    // Set up Nodemailer transporter if config is present
-    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    // Set up Nodemailer transporter if config is present (user field optional for local dev relays)
+    if (process.env.SMTP_HOST) {
+      const port = parseInt(process.env.SMTP_PORT || '587');
+      const secure = process.env.SMTP_SECURE !== undefined
+        ? process.env.SMTP_SECURE === 'true'
+        : port === 465;
+
+      const auth = process.env.SMTP_USER
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined;
+
       this.transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+        port,
+        secure,
+        ...(auth && { auth }),
+        // Resilient fallback for TLS certificate verification on dev/local environments
+        tls: {
+          rejectUnauthorized: false,
         },
       });
     }
   }
 
   private async logEmailToDisk(to: string, subject: string, html: string) {
-    const logsDir = path.join(__dirname, '..', '..', 'uploads', 'emails');
+    const logsDir = path.join(process.cwd(), 'uploads', 'emails');
     if (!fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true });
     }
@@ -58,7 +68,7 @@ ${html}
         return true;
       } catch (err) {
         console.error(`[Email Service] Failed to send email via SMTP to ${to}`, err);
-        // Fall back to disk logging
+        // Fall back to disk logging if SMTP fails
       }
     }
     await this.logEmailToDisk(to, subject, html);

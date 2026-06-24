@@ -37,7 +37,11 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      if (!err.response) {
+        setError('Connection failed. The API server is unreachable. Please verify your backend deployment/API URL.');
+      } else {
+        setError(err.response.data?.message || 'Invalid email or password');
+      }
       setLoading(false);
     }
   };
